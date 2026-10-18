@@ -1,0 +1,11 @@
+name = "vedashreewellness-crm"
+main = "_worker.js"
+compatibility_date = "2026-10-12"
+
+[assets]
+directory = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vedashree-db"
+database_id = "vedashree-db"
