@@ -1,19 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vedashree Wellness CRM</title>
+  <title>Vedashree Wellness - Login</title>
   <style>
-    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f6f8; }
-    .box { text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    h1 { color: #2e7d32; margin-bottom: 10px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 15px; }
+    .card { background: #fff; width: 100%; max-width: 380px; padding: 28px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+    .title { color: #1e5631; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { color: #64748b; font-size: 13px; margin-bottom: 24px; }
+    .form-group { text-align: left; margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px; text-transform: uppercase; }
+    .form-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+    .form-group input:focus { border-color: #1e5631; ring: 2px solid #a3e635; }
+    .btn { width: 100%; padding: 12px; background: #1e5631; color: #fff; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background: #163f24; }
+    .error { color: #dc2626; font-size: 13px; margin-top: 12px; display: none; }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>Vedashree Wellness CRM</h1>
-    <p>System Initialized & Ready for Setup.</p>
+
+  <div class="card">
+    <div class="title">VEDASHREE CRM</div>
+    <div class="subtitle">Ayurvedic Wellness Portal</div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Username / User ID</label>
+        <input type="text" id="username" placeholder="e.g. admin ya agent1" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" required />
+      </div>
+      <button type="submit" class="btn" id="loginBtn">Login Karein</button>
+      <div id="errorMsg" class="error"></div>
+    </form>
   </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const loginBtn = document.getElementById("loginBtn");
+      const errorMsg = document.getElementById("errorMsg");
+      loginBtn.innerText = "Checking...";
+      loginBtn.disabled = true;
+      errorMsg.style.display = "none";
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          sessionStorage.setItem("user", JSON.stringify(data.user));
+          if (data.user.role === "admin") {
+            window.location.href = "/admin.html";
+          } else {
+            window.location.href = "/agent.html";
+          }
+        } else {
+          errorMsg.innerText = data.message || "Login fail ho gaya";
+          errorMsg.style.display = "block";
+          loginBtn.innerText = "Login Karein";
+          loginBtn.disabled = false;
+        }
+      } catch (err) {
+        errorMsg.innerText = "Server error. Kripya dobara try karein.";
+        errorMsg.style.display = "block";
+        loginBtn.innerText = "Login Karein";
+        loginBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
-    </html>
+  </html>
