@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Calling CRM - Vedashree Wellness</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f1f5f9; color: #1e293b; padding-bottom: 50px; }
+    
+    /* HEADER */
+    .top-bar { background: #15803d; color: white; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; }
+    .agent-name { font-size: 15px; font-weight: 700; }
+    .logout-btn { background: #b91c1c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+
+    .container { max-width: 900px; margin: 15px auto; padding: 0 12px; }
+
+    /* SECTION 1: MANUAL DIALER */
+    .dialer-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .dialer-input-row { display: flex; gap: 8px; }
+    .dialer-input { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; }
+    .btn-call { background: #16a34a; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+    /* SECTION 2: LEADS CALLING QUEUE */
+    .section-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #334155; }
+    .lead-card { background: white; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .lead-info h4 { font-size: 15px; color: #0f172a; margin-bottom: 4px; }
+    .lead-info p { font-size: 12px; color: #64748b; }
+    .btn-call-small { background: #16a34a; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; text-decoration: none; }
+
+    /* POPUP MODAL (Order / Follow-up / Disposition) */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 15px; z-index: 999; }
+    .modal-box { background: white; width: 100%; max-width: 500px; border-radius: 12px; overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+    .modal-header { background: #15803d; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .tab-nav { display: flex; border-bottom: 2px solid #e2e8f0; }
+    .tab-nav button { flex: 1; padding: 12px; background: none; border: none; font-weight: 700; color: #64748b; cursor: pointer; }
+    .tab-nav button.active { color: #15803d; border-bottom: 3px solid #15803d; }
+    .modal-body { padding: 16px; overflow-y: auto; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+
+    /* SECTION 3: DISPOSITION TAG BUTTONS */
+    .disp-title { font-size: 13px; font-weight: 700; color: #334155; margin: 15px 0 8px; }
+    .disposition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+    .disp-btn { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 4px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; color: #334155; }
+    .disp-btn:hover { background: #e2e8f0; }
+
+    .submit-order-btn { width: 100%; padding: 12px; background: #15803d; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="agent-name" id="agentNameLabel">Staff Portal</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="container">
+    
+    <!-- MANUAL DIALER -->
+    <div class="dialer-card">
+      <div class="dialer-input-row">
+        <input type="tel" id="manualPhone" class="dialer-input" placeholder="Manual number dial karein..." />
+        <button class="btn-call" onclick="startCall(null, document.getElementById('manualPhone').value, 'Manual Customer')">Call</button>
+      </div>
+    </div>
+
+    <!-- CALLING QUEUE LIST -->
+    <div class="section-title">Aapke Assigned Calling Numbers</div>
+    <div id="leadsList">
+      <p style="color: #64748b; font-size: 13px;">Loading numbers...</p>
+    </div>
+
+  </div>
+
+  <!-- CALL POPUP MODAL -->
+  <div class="modal-overlay" id="callModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalCustomerTitle">Calling...</h3>
+        <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- TABS: ORDER VS FOLLOW-UP -->
+      <div class="tab-nav">
+        <button id="tabOrderBtn" class="active" onclick="switchTab('order')">1. Order Banayein</button>
+        <button id="tabFollowBtn" onclick="switchTab('follow')">2. Follow-Up Schedule</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- ORDER TAB FORM -->
+        <div id="orderTabSection">
+          <form id="orderForm">
+            <div class="form-group">
+              <label>Customer Name</label>
+              <input type="text" id="orderCustName" required />
+            </div>
+            <div class="form-group">
+              <label>Full Address</label>
+              <textarea id="orderAddress" rows="2" placeholder="Ghar ka pata, Landmark..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label>Pincode</label>
+              <input type="text" id="orderPincode" placeholder="6-digit pincode" required />
+            </div>
+            <div class="form-group">
+              <label>Medicine / Kit Name</label>
+              <input type="text" id="orderMedicine" placeholder="e.g. Vedashree Joint Care (30 Days)" required />
+            </div>
+            <div class="form-group">
+              <label>Order Amount (₹)</label>
+              <input type="number" id="orderAmount" placeholder="Amount" required />
+            </div>
+            <button type="submit" class="submit-order-btn">Confirm Order Submit</button>
+          </form>
+        </div>
+
+        <!-- FOLLOW UP TAB FORM -->
+        <div id="followTabSection" style="display: none;">
+          <form id="followForm">
+            <div class="form-group">
+              <label>Follow-Up Date</label>
+              <input type="date" id="followDate" required />
+            </div>
+            <div class="form-group">
+              <label>Follow-Up Time</label>
+              <input type="time" id="followTime" required />
+            </div>
+            <div class="form-group">
+              <label>Call Notes / Baatchit details</label>
+              <textarea id="followNotes" rows="3" placeholder="Customer ne kya bola..."></textarea>
+            </div>
+            <button type="submit" class="submit-order-btn" style="background:#2563eb;">Follow-Up Save Karein</button>
+          </form>
+        </div>
+
+        <!-- CALL DISPOSITION BUTTONS (CALL CUT HONE KE BAAD) -->
+        <div class="disp-title">Call Status Tag Lagayein (Agar Order/Followup nahi hua):</div>
+        <div class="disposition-grid">
+          <button class="disp-btn" onclick="saveDisposition('not_pick')">Not Pick</button>
+          <button class="disp-btn" onclick="saveDisposition('busy')">Busy</button>
+          <button class="disp-btn" onclick="saveDisposition('call_cut')">Call Cut</button>
+          <button class="disp-btn" onclick="saveDisposition('call_waiting')">Call Waiting</button>
+          <button class="disp-btn" onclick="saveDisposition('switch_off')">Switch Off</button>
+          <button class="disp-btn" onclick="saveDisposition('not_interested')">Not Interested</button>
+          <button class="disp-btn" onclick="saveDisposition('dnd')">DND</button>
+          <button class="disp-btn" onclick="saveDisposition('by_mistake')">By Mistake</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+    if (!user.id || user.role !== "agent") {
+      window.location.href = "/";
+    }
+    document.getElementById("agentNameLabel").innerText = `${user.agent_name} (${user.username})`;
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
+
+    let activeLead = null;
+
+    // Load Assigned Leads
+    async function loadAgentLeads() {
+      try {
+        const res = await fetch(`/api/agent/leads?agent_id=${user.id}`);
+        const data = await res.json();
+        const container = document.getElementById("leadsList");
+        container.innerHTML = "";
+
+        if (data.leads.length === 0) {
+          container.innerHTML = "<p style='color:#64748b;'>Koi pending numbers nahi hain abhi.</p>";
+          return;
+        }
+
+        data.leads.forEach(l => {
+          const div = document.createElement("div");
+          div.className = "lead-card";
+          div.innerHTML = `
+            <div class="lead-info">
+              <h4>${l.customer_name}</h4>
+              <p>📞 ${l.phone_number} | 📍 ${l.city || 'N/A'}</p>
+              <p style="color:#15803d; margin-top:3px;">Status: ${l.last_disposition || 'Pending'}</p>
+            </div>
+            <div>
+              <button class="btn-call-small" onclick="startCall(${l.id}, '${l.phone_number}', '${l.customer_name}')">Call Now</button>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) { console.error(err); }
+    }
+
+    // Call Trigger & Pop Modal
+    function startCall(leadId, phone, name) {
+      activeLead = { id: leadId, phone, name };
+      document.getElementById("modalCustomerTitle").innerText = `${name} (${phone})`;
+      document.getElementById("orderCustName").value = name;
+      
+      // Auto open mobile dialer
+      window.open(`tel:${phone}`);
+
+      // Open Modal
+      document.getElementById("callModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("callModal").style.display = "none";
+      activeLead = null;
+    }
+
+    function switchTab(tab) {
+      if (tab === 'order') {
+        document.getElementById("orderTabSection").style.display = "block";
+        document.getElementById("followTabSection").style.display = "none";
+        document.getElementById("tabOrderBtn").classList.add("active");
+        document.getElementById("tabFollowBtn").classList.remove("active");
+      } else {
+        document.getElementById("orderTabSection").style.display = "none";
+        document.getElementById("followTabSection").style.display = "block";
+        document.getElementById("tabFollowBtn").classList.add("active");
+        document.getElementById("tabOrderBtn").classList.remove("active");
+      }
+    }
+
+    // Save Disposition Tag
+    async function saveDisposition(tag) {
+      if (!activeLead) return;
+      await fetch("/api/calls/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: activeLead.id,
+          agent_id: user.id,
+          call_type: activeLead.id ? "click_to_call" : "manual",
+          duration_seconds: 30, // Default duration placeholder
+          disposition: tag
+        })
+      });
+      alert(`Status "${tag}" update ho gaya!`);
+      closeModal();
+      loadAgentLeads();
+    }
+
+    // Submit Order Form
+    document.getElementById("orderForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!activeLead) return;
+
+      const orderData = {
+        lead_id: activeLead.id,
+        agent_id: user.id,
+        customer_name: document.getElementById("orderCustName").value,
+        customer_phone: activeLead.phone,
+        shipping_address: document.getElementById("orderAddress").value,
+        pincode: document.getElementById("orderPincode").value,
+        medicine_details: document.getElementById("orderMedicine").value,
+        order_amount: document.getElementById("orderAmount").value
+      };
+
+      const res = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Order successfully create ho gaya!");
+        closeModal();
+        loadAgentLeads();
+      }
+    });
+
+    // Initial Load
+    loadAgentLeads();
+  </script>
+</body>
+  </html>
